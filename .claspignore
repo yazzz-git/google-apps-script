@@ -1,0 +1,6 @@
+# Only the files inside the rootDir (src/) are pushed to Apps Script.
+# Ignore everything, then explicitly allow the project source files.
+**/**
+
+!appsscript.json
+!Code.js

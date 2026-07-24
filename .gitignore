@@ -1,0 +1,8 @@
+# clasp / Google OAuth credentials — NEVER commit these (they contain access tokens)
+.clasprc.json
+*.clasprc.json
+.clasp-credentials.json
+
+# Node
+node_modules/
+npm-debug.log*
