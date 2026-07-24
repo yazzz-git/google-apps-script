@@ -130,3 +130,22 @@ clasp push      # push changes back
 | `createEveryMinuteTrigger` | Installs the 1-minute trigger (idempotent, no duplicates).    |
 | `listTriggers`             | Logs all installed triggers (verification).                   |
 | `dedupeTriggers`           | Deletes duplicate `sendDraftsToYas` triggers, keeping one.    |
+| `diagnose`                 | Read-only troubleshooting: logs quota, matching drafts, triggers. Sends nothing. |
+
+## Sending mechanism (important)
+
+`sendDraftsToYas` sends each qualifying draft with the **Gmail Advanced Service**
+(`Gmail.Users.Drafts.send({ id: draft.getId() }, "me")`), *not* GmailApp's
+`draft.send()`.
+
+Reason: drafts created through the Gmail API — which is how Claude creates them
+via the Gmail connector — can be **read** by `GmailApp` but throw
+`Exception: Gmail operation not allowed.` when sent with `GmailDraft.send()`
+(Apps Script [Issue #383141574](https://issuetracker.google.com/issues/383141574)).
+Sending the draft by its **ID** through the Gmail API works for both
+GmailApp-created and API-created drafts. The exact-recipient matching that
+decides *whether* to send is unchanged.
+
+The Gmail Advanced Service is enabled in `src/appsscript.json`
+(`dependencies.enabledAdvancedServices`) and is covered by the existing
+`https://mail.google.com/` scope — no additional OAuth scope is required.
