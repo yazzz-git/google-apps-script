@@ -134,3 +134,60 @@ function dedupeTriggers() {
       "."
   );
 }
+
+/**
+ * DIAGNOSTIC ONLY — this function never sends, deletes, or modifies anything.
+ *
+ * It logs:
+ *   - the remaining daily Gmail send quota,
+ *   - every draft that currently matches the auto-send criteria (id / subject /
+ *     from / date only — no body is read out), and
+ *   - the installed triggers for sendDraftsToYas.
+ *
+ * Use it to troubleshoot the "Gmail operation not allowed" error without
+ * sending any email.
+ */
+function diagnose() {
+  const TARGET_EMAIL = "yaz3.14@gmail.com";
+
+  try {
+    console.log("Remaining daily email quota: " + MailApp.getRemainingDailyQuota());
+  } catch (e) {
+    console.log("Could not read daily quota: " + e.message);
+  }
+
+  const drafts = GmailApp.getDrafts();
+  console.log("Total drafts in this account: " + drafts.length);
+
+  let matches = 0;
+  for (const draft of drafts) {
+    const message = draft.getMessage();
+    const to = message.getTo().trim().toLowerCase();
+    const cc = message.getCc().trim();
+    const bcc = message.getBcc().trim();
+    if (to === TARGET_EMAIL && cc === "" && bcc === "") {
+      matches++;
+      console.log(
+        "MATCH -> draftId=" + draft.getId() +
+          ' | subject="' + message.getSubject() + '"' +
+          " | from=" + message.getFrom() +
+          " | date=" + message.getDate()
+      );
+    }
+  }
+  console.log(
+    "Drafts matching the auto-send criteria: " +
+      matches +
+      " (these are the ones sendDraftsToYas would send)"
+  );
+
+  const triggers = ScriptApp.getProjectTriggers().filter(function (t) {
+    return t.getHandlerFunction() === "sendDraftsToYas";
+  });
+  console.log("Installed triggers for sendDraftsToYas: " + triggers.length);
+  triggers.forEach(function (t, i) {
+    console.log(
+      "  trigger#" + (i + 1) + " id=" + t.getUniqueId() + " eventType=" + t.getEventType()
+    );
+  });
+}
