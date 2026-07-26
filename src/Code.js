@@ -45,20 +45,19 @@ function sendDraftsToYas() {
       cc === "" &&
       bcc === ""
     ) {
-      // Send via the Gmail Advanced Service (Gmail API) instead of
-      // GmailApp's draft.send(). Drafts created through the Gmail API
-      // (e.g. reports Claude creates via the Gmail connector) can be READ
-      // by GmailApp but throw "Gmail operation not allowed." from
-      // GmailDraft.send() — see https://issuetracker.google.com/issues/383141574
-      // Sending the draft by its ID through the Gmail API works for both
-      // GmailApp-created and API-created drafts. The recipient match above is
-      // unchanged, so the exact-recipient safety guarantee still holds.
+      // Send the draft. Wrapped in try/catch so a send error on a single
+      // draft can't crash the whole run or block the remaining drafts. In
+      // particular, sending many drafts in quick succession can trip Gmail's
+      // send-rate throttle, which surfaces as "Gmail operation not allowed." —
+      // when that happens the draft is left untouched and simply retried on
+      // the next 1-minute run. The recipient match above is unchanged, so the
+      // exact-recipient safety guarantee still holds.
       try {
-        Gmail.Users.Drafts.send({ id: draft.getId() }, "me");
+        draft.send();
         console.log(`Sent: ${message.getSubject()}`);
       } catch (err) {
         console.log(
-          `FAILED to send draft (subject: "${message.getSubject()}", id: ${draft.getId()}): ${err.message}`
+          `SKIPPED draft (subject: "${message.getSubject()}") — will retry next run: ${err.message}`
         );
       }
     }

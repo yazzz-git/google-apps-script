@@ -132,20 +132,26 @@ clasp push      # push changes back
 | `dedupeTriggers`           | Deletes duplicate `sendDraftsToYas` triggers, keeping one.    |
 | `diagnose`                 | Read-only troubleshooting: logs quota, matching drafts, triggers. Sends nothing. |
 
-## Sending mechanism (important)
+## Sending mechanism & rate limits (important)
 
-`sendDraftsToYas` sends each qualifying draft with the **Gmail Advanced Service**
-(`Gmail.Users.Drafts.send({ id: draft.getId() }, "me")`), *not* GmailApp's
-`draft.send()`.
+`sendDraftsToYas` sends each qualifying draft with `draft.send()`, wrapped in a
+`try/catch`.
 
-Reason: drafts created through the Gmail API — which is how Claude creates them
-via the Gmail connector — can be **read** by `GmailApp` but throw
-`Exception: Gmail operation not allowed.` when sent with `GmailDraft.send()`
-(Apps Script [Issue #383141574](https://issuetracker.google.com/issues/383141574)).
-Sending the draft by its **ID** through the Gmail API works for both
-GmailApp-created and API-created drafts. The exact-recipient matching that
-decides *whether* to send is unchanged.
+Why the `try/catch` matters: sending **many** drafts in quick succession (for
+example, clearing a backlog) can trip Gmail's send-rate throttle, which surfaces
+as `Exception: Gmail operation not allowed.` Without error handling, that
+exception crashes the whole run part-way through the batch. With the `try/catch`,
+a throttled draft is **left untouched** and simply retried on the next 1-minute
+run — the run never crashes, and no draft is ever modified. The exact-recipient
+matching that decides *whether* to send is unchanged.
 
-The Gmail Advanced Service is enabled in `src/appsscript.json`
-(`dependencies.enabledAdvancedServices`) and is covered by the existing
-`https://mail.google.com/` scope — no additional OAuth scope is required.
+Consumer Gmail also has a **daily send cap** (~100 recipients/day for
+`@gmail.com` accounts). Normal operation (a few reports per day) is far below it;
+the cap only becomes relevant if a large backlog is flushed at once. Use
+`diagnose()` to log the remaining daily quota.
+
+> Note: an earlier version of this script sent via the Gmail Advanced Service to
+> work around Apps Script [Issue #383141574](https://issuetracker.google.com/issues/383141574)
+> (API-created drafts failing `GmailDraft.send()`). That was reverted after
+> `draft.send()` proved to send API-created drafts correctly in this account —
+> the observed failures were send-rate throttling, not that bug.
