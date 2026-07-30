@@ -83,6 +83,24 @@ error, open:
 …while signed in as `info.cclpartners@gmail.com`, turn **Google Apps Script API**
 **ON**, then re-run the create/push commands.
 
+## Status: live
+
+The trigger is installed and running. Confirmed 2026-07-30: a backlog of 14
+qualifying drafts was delivered automatically in a single 36-second burst
+(15:30:50–15:31:26 UTC) with no manual send, and the Drafts folder for
+`yaz3.14@gmail.com` is now empty.
+
+### Multi-account gotcha (if you need the editor later)
+
+`script.google.com` links resolve through Google's `authuser=N` account index,
+which shifts as you sign in and out of accounts. If a project URL fails with
+*"Sorry, unable to open the file at this time"*, the index is pointing at the
+wrong account. Adding `?authuser=<email>` does **not** reliably fix it.
+
+Reliable fix: open an **Incognito window**, sign in as
+`info.cclpartners@gmail.com` **only**, then go to
+<https://script.google.com/home> and open the project from the list.
+
 ## Install the 1-minute trigger + grant Gmail authorization
 
 Triggers can only be created from inside Apps Script (there is no CLI/API call
